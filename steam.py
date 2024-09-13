@@ -3,40 +3,52 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as ec
+from faker import Faker
+
+STEAM_LINK = 'https://store.steampowered.com/'
+LOG_IN = (By.XPATH, "//a[contains(@href, 'login') and contains(text(), 'войти')]")
+USERNAME = (By.XPATH, "//form//div[contains(@class, '_3BkiHun-mminuTO-Y-zXke')]//input[@type='text']")
+PASSWORD = (By.XPATH, "//input[@type='password']")
+SUBMIT = (By.XPATH, "//button[@type='submit' and contains(text(), 'Войти')]")
+LOADING = (By.XPATH , "//button[@type='submit']//div//div")
+ERROR = (By.CLASS_NAME, "_1W_6HXiG4JJ0By1qN_0fGZ")
 
 
 @pytest.fixture
 def driver():
     driver = webdriver.Chrome()
+    driver.get(STEAM_LINK)
     yield driver
+    driver.quit()
 
 
 def login_page(driver):
-    driver.get("https://store.steampowered.com/")
-    WebDriverWait(driver, 10)
+    login_link = WebDriverWait(driver, 10).until(
+        ec.element_to_be_clickable(LOG_IN)
+    )
 
-    login_link = driver.find_element(By.XPATH, "//a[contains(@href, 'login') and contains(text(), 'войти')]")
     login_link.click()
 
 
 def input_creds(driver):
-    WebDriverWait(driver, 10).until(
-        ec.presence_of_element_located(
-            (By.XPATH, "//input[@type='text' and contains(@class, '_2GBWeup5cttgbTw8FM3tfx')]"))
-    )
-    login_input = driver.find_element(By.XPATH, "//input[@type='text' and contains(@class, '_2GBWeup5cttgbTw8FM3tfx')]")
-    login_input.send_keys("your_username")
+    faker = Faker()
+    login_input = WebDriverWait(driver, 10).until(
+        ec.element_to_be_clickable(USERNAME))
 
-    pass_input = driver.find_element(By.XPATH, "//input[@type='password']")
-    pass_input.send_keys("your_username")
+    login_input.send_keys(faker.user_name())
 
-    press_button = driver.find_element(By.XPATH, "//button[@type='submit' and contains(text(), 'Войти')]")
+    pass_input = WebDriverWait(driver, 10).until(
+        ec.element_to_be_clickable(PASSWORD))
+    pass_input.send_keys(faker.password())
+
+    press_button =WebDriverWait(driver, 10).until(
+        ec.element_to_be_clickable(SUBMIT))
     press_button.click()
 
 
 def check_loading_element(driver):
     WebDriverWait(driver, 10).until(
-        ec.presence_of_element_located((By.CSS_SELECTOR, "._1VLukpV8qjL4BULw7Zob_l.WYrJyNEVnjgAnMVZgvPeg"))
+        ec.presence_of_element_located(LOADING)
         # locator loading
 
     )
@@ -44,14 +56,14 @@ def check_loading_element(driver):
 
 def check_error_message(driver):
     WebDriverWait(driver, 10).until(
-        ec.invisibility_of_element_located((By.CSS_SELECTOR, "._1VLukpV8qjL4BULw7Zob_l.WYrJyNEVnjgAnMVZgvPeg"))
+        ec.invisibility_of_element_located(LOADING)
         # locator loading
     )
 
     error_message = WebDriverWait(driver, 10).until(
-        ec.presence_of_element_located((By.CLASS_NAME, "_1W_6HXiG4JJ0By1qN_0fGZ"))
+        ec.presence_of_element_located(ERROR)
     )
-    assert error_message.is_displayed()
+    assert error_message.is_displayed(), "Сообщение об ошибке не отображается"
 
 
 def test_login(driver):
